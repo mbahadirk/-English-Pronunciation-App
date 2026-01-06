@@ -1,0 +1,20 @@
+{
+    "A1": [
+        "apple", "book", "cat", "dog", "egg", "fish", "go", "hat", "ice", "job"
+    ],
+    "A2": [
+        "action", "banana", "camera", "desk", "email", "flight", "guitar", "hotel", "island", "jacket"
+    ],
+    "B1": [
+        "account", "believe", "century", "degree", "effect", "future", "ground", "health", "ignore", "journey"
+    ],
+    "B2": [
+        "abandon", "benefit", "calculate", "debate", "efficient", "factor", "gather", "habitat", "illegal", "jealous"
+    ],
+    "C1": [
+        "abolish", "benchmark", "cognitive", "depict", "facilitate", "garage", "harassment", "ideology", "joyous", "kinship"
+    ],
+    "C2": [
+        "aberration", "cacophony", "debilitate", "ebullient", "fabricate", "garrulous", "hackneyed", "iconoclast", "juxtapose", "kaleidoscope"
+    ]
+}
