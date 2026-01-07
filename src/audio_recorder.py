@@ -23,9 +23,9 @@ class AudioRecorder:
         self.vad_enabled = False
         
         # Dynamic Noise Adaptation - TUNED
-        self.noise_floor = 300.0   # Higher initial guess
-        self.speech_threshold_ratio = 2.0 
-        self.min_amplitude = 500   # Hard minimum threshold (prevents 0-level silence triggers)
+        self.noise_floor = 500.0   # Higher initial guess
+        self.speech_threshold_ratio = 3.0  # Stricter: signal must be 3x noise
+        self.min_amplitude = 800   # Hard minimum threshold (ignores breathing/clicks)
         self.adaptation_rate = 0.05 
         
         self.silence_blocks = 0

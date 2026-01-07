@@ -1,10 +1,39 @@
 import tkinter as tk
 from tkinter import messagebox
-import json
+import csv
 import random
 import threading
 import os
 import sys
+
+# Add the current directory to path to find local modules if needed
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from audio_recorder import AudioRecorder
+from scorer import PronunciationScorer
+
+
+class Application(tk.Tk):
+    def __init__(self):
+        super().__init__()
+        self.title("English Pronunciation Coach")
+        self.geometry("600x600")
+        
+        # Data
+        self.levels = ["A1", "A2", "B1", "B2", "C1", "C2"]
+        self.words_data = self.load_words()
+        self.unlocked_level_index = 0
+        
+        # Session state
+# ... (intermediate code preserved implicitly by tool, but I'm rewriting init if selecting huge block)
+# Actually, I should just target the load_words method and imports.
+
+# Let's split this into two edits if I can't match huge blocks.
+# Edit 1: Imports
+# Edit 2: load_words method
+
+# Re-targeting just imports here
+
 
 # Add the current directory to path to find local modules if needed
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -40,16 +69,16 @@ class Application(tk.Tk):
         # Top Bar for settings
         self.top_bar = tk.Frame(self, bg="#eeeeee", height=40)
         self.top_bar.pack(fill="x", side="top")
-        
+
         tk.Label(self.top_bar, text="Mic:", bg="#eeeeee").pack(side="left", padx=5)
-        
+
         self.device_var = tk.StringVar()
         self.devices = self.recorder.list_devices()
         device_names = [d[1] for d in self.devices]
-        
+
         if not device_names:
             device_names = ["Default"]
-        
+
         self.device_menu = tk.OptionMenu(self.top_bar, self.device_var, *device_names, command=self.change_device)
         self.device_menu.pack(side="left", padx=5)
         self.device_var.set(device_names[0])
@@ -57,9 +86,9 @@ class Application(tk.Tk):
 
         self.container = tk.Frame(self)
         self.container.pack(fill="both", expand=True, padx=20, pady=20)
-        
+
         self.show_loading_screen()
-        
+
         # Start loading model in background
         self.load_model_thread()
 
@@ -76,24 +105,40 @@ class Application(tk.Tk):
             self.start_auto_listen()
 
     def load_words(self):
+        data = {l: [] for l in self.levels}
         try:
-            path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "words.json")
-            with open(path, "r") as f:
-                return json.load(f)
+            path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "ENGLISH_CERF_WORDS.csv")
+            with open(path, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    word = row.get("headword", "").strip()
+                    # Some entries like "a.m./A.M./am/AM" - take first part? No, take whole or split?
+                    # User request implies simple words. Let's take the part before slash if present?
+                    # Actually, let's keep it simple for now as per CSV glimpse: "abandon"
+
+                    level = row.get("CEFR", "").strip().upper()
+
+                    if word and level in data:
+                        data[level].append(word)
+
+            # Debug stats
+            total = sum(len(v) for v in data.values())
+            print(f"Loaded {total} words from CSV.")
+            return data
         except Exception as e:
-            messagebox.showerror("Error", f"Could not load words.json: {e}")
-            return {}
+            messagebox.showerror("Error", f"Failed to load CSV word data: {e}")
+            return data
 
     def load_model_thread(self):
         def _load():
             try:
                 # Switch to "tiny" for speed on CPU
-                self.scorer = PronunciationScorer(model_size="tiny")
+                self.scorer = PronunciationScorer(model_size="tiny.en")
                 self.after(0, self.on_model_loaded)
             except Exception as e:
                 print(f"Error loading model: {e}")
                 self.after(0, lambda: messagebox.showerror("Error", f"Failed to load Whisper model: {e}"))
-        
+
         self.model_loading = True
         threading.Thread(target=_load, daemon=True).start()
 
@@ -104,25 +149,25 @@ class Application(tk.Tk):
     def show_loading_screen(self):
         for widget in self.container.winfo_children():
             widget.destroy()
-        
+
         tk.Label(self.container, text="Loading AI Model...", font=("Helvetica", 16)).pack(expand=True)
         tk.Label(self.container, text="(This may take a moment)", font=("Helvetica", 10)).pack()
 
     def show_level_selection(self):
         # Stop listening if we were
         self.recorder.stop_recording()
-        
+
         for widget in self.container.winfo_children():
             widget.destroy()
-            
+
         tk.Label(self.container, text="Select Level", font=("Helvetica", 24, "bold")).pack(pady=20)
-        
+
         for i, level in enumerate(self.levels):
             state = "normal" if i <= self.unlocked_level_index else "disabled"
             color = "green" if i <= self.unlocked_level_index else "grey"
-            
-            btn = tk.Button(self.container, text=f"Level {level}", 
-                            font=("Helvetica", 14), 
+
+            btn = tk.Button(self.container, text=f"Level {level}",
+                            font=("Helvetica", 14),
                             state=state,
                             width=15,
                             command=lambda l=level: self.start_level(l))
@@ -353,27 +398,3 @@ class Application(tk.Tk):
 
         tk.Button(self.container, text="Back to Menu", font=("Helvetica", 14), command=self.show_level_selection).pack(pady=30)
 
-    def show_results_screen(self):
-        for widget in self.container.winfo_children():
-            widget.destroy()
-            
-        avg_score = self.total_score / len(self.session_words) if self.session_words else 0
-        success = avg_score >= 70
-        
-        title = "Level Complete!" if success else "Keep Practicing"
-        color = "green" if success else "orange"
-        
-        tk.Label(self.container, text=title, font=("Helvetica", 24, "bold"), fg=color).pack(pady=20)
-        tk.Label(self.container, text=f"Average Score: {avg_score:.1f}/100", font=("Helvetica", 18)).pack(pady=10)
-        
-        if success:
-            tk.Label(self.container, text="Unlocked next level!", font=("Helvetica", 12)).pack(pady=5)
-            # Unlock next level logic
-            current_idx = self.levels.index(self.current_level)
-            if current_idx < len(self.levels) - 1:
-                if self.unlocked_level_index <= current_idx:
-                    self.unlocked_level_index = current_idx + 1
-        else:
-            tk.Label(self.container, text="Need 70+ average to unlock next level.", font=("Helvetica", 12)).pack(pady=5)
-
-        tk.Button(self.container, text="Back to Menu", font=("Helvetica", 14), command=self.show_level_selection).pack(pady=30)

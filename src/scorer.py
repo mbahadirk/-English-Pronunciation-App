@@ -5,7 +5,7 @@ import numpy as np
 
 
 class PronunciationScorer:
-    def __init__(self, model_size="base"):
+    def __init__(self, model_size="medium.en"):
         print(f"Loading Whisper model ({model_size})...")
         # Ensure we are using CPU if CUDA is not available, or let torch decide (Whisper handles this usually)
         # We can enforce cpu if needed: device="cpu"
@@ -35,18 +35,38 @@ class PronunciationScorer:
             result = self.model.transcribe(audio_np, fp16=False) # fp16=False for CPU
             text = result["text"].strip().lower()
             
-            # Clean up punctuation
-            text_clean = ''.join(c for c in text if c.isalnum() or c.isspace())
-            target_clean = ''.join(c for c in target_word.lower() if c.isalnum() or c.isspace())
-
-            print(f"Target: {target_clean}, Transcribed: {text_clean}")
-
-            # Calculate score using Levenshtein distance ratio
-            # fuzz.ratio returns 0-100
-            raw_score = fuzz.ratio(target_clean, text_clean)
+            # Calculate score using "Best Match" logic
+            # If the user says "Um... fish... okay", and target is "fish", we should find "fish".
             
+            target_clean = target_word.lower().strip()
+            text_clean = result['text'].lower().strip()
+            
+            # Remove punctuation for better tokenization
+            import string
+            text_no_punct = text_clean.translate(str.maketrans('', '', string.punctuation))
+            tokens = text_no_punct.split()
+            
+            best_score = 0
+            
+            if not tokens:
+                 # usage case: empty or just noise
+                 best_score = 0
+            else:
+                # Check each word in the phrase against the target
+                for token in tokens:
+                    # Calculate similarity for looking up the word
+                    # fuzz.ratio is good for direct comparison
+                    current_score = fuzz.ratio(target_clean, token)
+                    if current_score > best_score:
+                        best_score = current_score
+                        
+                # Also check the whole phrase just in case (e.g. multi-word targets like "ice cream")
+                phrase_score = fuzz.ratio(target_clean, text_no_punct)
+                if phrase_score > best_score:
+                    best_score = phrase_score
+
             # Normalize to 0-10 integer
-            score = int(round(raw_score / 10.0))
+            score = int(round(best_score / 10.0))
             
             return score, text_clean
         except Exception as e:
