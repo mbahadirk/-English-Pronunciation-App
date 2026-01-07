@@ -42,7 +42,11 @@ class PronunciationScorer:
             print(f"Target: {target_clean}, Transcribed: {text_clean}")
 
             # Calculate score using Levenshtein distance ratio
-            score = fuzz.ratio(target_clean, text_clean)
+            # fuzz.ratio returns 0-100
+            raw_score = fuzz.ratio(target_clean, text_clean)
+            
+            # Normalize to 0-10 integer
+            score = int(round(raw_score / 10.0))
             
             return score, text_clean
         except Exception as e:
