@@ -6,6 +6,8 @@ import threading
 import os
 import sys
 
+from speaker import Speaker
+
 # Add the current directory to path to find local modules if needed
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -63,6 +65,7 @@ class Application(tk.Tk):
         # Backend
         self.recorder = AudioRecorder()
         self.scorer = None
+        self.speaker = Speaker()
         self.model_loading = False
         
         # UI Setup
@@ -111,11 +114,11 @@ class Application(tk.Tk):
             with open(path, "r", encoding="utf-8") as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    word = row.get("headword", "").strip()
-                    # Some entries like "a.m./A.M./am/AM" - take first part? No, take whole or split?
-                    # User request implies simple words. Let's take the part before slash if present?
-                    # Actually, let's keep it simple for now as per CSV glimpse: "abandon"
-
+                    raw_word = row.get("headword", "").strip()
+                    # CLEANUP: Handle entries like "T-shirt/tee-shirt" or "airplane/aeroplane"
+                    # We take the first variation as the primary display word
+                    word = raw_word.split('/')[0].strip()
+                    
                     level = row.get("CEFR", "").strip().upper()
 
                     if word and level in data:
@@ -211,8 +214,15 @@ class Application(tk.Tk):
         tk.Label(self.container, text=f"Level {self.current_level} - Word {self.current_word_index + 1}/{len(self.session_words)}", 
                  font=("Helvetica", 12)).pack(pady=10)
         
-        # Target Word
-        tk.Label(self.container, text=target_word, font=("Helvetica", 36, "bold"), fg="#333").pack(pady=20)
+        # Target Word Frame
+        word_frame = tk.Frame(self.container)
+        word_frame.pack(pady=20)
+        
+        tk.Label(word_frame, text=target_word, font=("Helvetica", 36, "bold"), fg="#333").pack(side="left", padx=10)
+        
+        listen_btn = tk.Button(word_frame, text="🔊 Listen", font=("Helvetica", 12), 
+                               command=lambda t=target_word: self.speaker.speak(t))
+        listen_btn.pack(side="left", padx=10)
         
         # Instructions
         self.status_label = tk.Label(self.container, text="Listening...", font=("Helvetica", 12, "italic"), fg="blue")

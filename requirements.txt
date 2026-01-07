@@ -3,3 +3,4 @@ sounddevice
 numpy<2
 scipy
 rapidfuzz
+pyttsx3
