@@ -24,12 +24,11 @@ Before running the application, ensure you have the following installed:
 1.  **Clone the repository:**
     ```bash
     git clone https://github.com/mbahadirk/English-Pronunciation-App.git
-    cd temporal-pioneer
     ```
 
 2.  **Navigate to the application directory:**
     ```bash
-    cd pronunciation_app
+    cd English-Pronunciation-App
     ```
 
 3.  **Run the setup script:**
